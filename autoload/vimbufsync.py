@@ -22,14 +22,14 @@ import re
 import os
 import sys
 import bisect
-from itertools import groupby, izip
+from itertools import groupby
 
 version = [0,1,0] # 0.1.0
 
 def check_version(v,who="a plugin"):
   """Call it with required version number to print error message if needed"""
   global version
-  if isinstance(v,str): v = map(int,v.split("."))
+  if isinstance(v,str): v = list(map(int,v.split(".")))
   if v > version:
     msg = "vimbufsync: current version is %s but %s requires version %s (installed in \"%s\"). Please update."
     sys.stderr.write(msg % (".".join(map(str,version)), who, ".".join(map(str,v)), os.path.abspath(__file__)))
@@ -63,7 +63,7 @@ def extract_changes(nr):
   global changes_pattern
   # compute changes as a list of match objects
   changes = changes_of_buffer(nr)
-  changes = filter(None,map(changes_pattern.match,changes))
+  changes = [_f for _f in map(changes_pattern.match,changes) if _f]
   if len(changes) == 0:
     return None
   # find current position in change list
@@ -143,7 +143,7 @@ class ShadowBuffer:
     first_pass = previous == None
     if first_pass:
       return None
-    return [k for (k,v) in changes.items()
+    return [k for (k,v) in list(changes.items())
               if not k in previous or previous[k] < v]
 
   def _find_changed_line(self):
@@ -212,7 +212,7 @@ class ShadowBuffer:
       if line < line_max:
         s1 = self._shadow[line]
         s2 = self._buf[line]
-        col = [i for i,(a1,a2)  in enumerate(izip(s1,s2)) if a1!=a2]
+        col = [i for i,(a1,a2)  in enumerate(zip(s1,s2)) if a1!=a2]
         if col: col = col[0]+1
         else:   col = min(len(s1),len(s2))+1
       else:
@@ -254,7 +254,7 @@ class LambdaDeletionListener(DeletionListener):
 def garbage_collect():
   """Garbage collect deleted buffers"""
   global shadow_buffers, deletion_listeners
-  for (nr,shadow) in shadow_buffers.items():
+  for (nr,shadow) in list(shadow_buffers.items()):
     if not (shadow._buf in vim.buffers):
       del shadow_buffers[nr]
       for l in deletion_listeners:
